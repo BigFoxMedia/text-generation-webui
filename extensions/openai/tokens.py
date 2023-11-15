@@ -1,37 +1,26 @@
-from extensions.openai.utils import float_list_to_base64
-from modules.text_generation import encode, decode
-import numpy as np
+from modules.text_generation import decode, encode
+
 
 def token_count(prompt):
     tokens = encode(prompt)[0]
-
     return {
-        'results': [{
-            'tokens': len(tokens)
-        }]
+        'length': len(tokens)
     }
 
 
-def token_encode(input, encoding_format):
-    # if isinstance(input, list):
+def token_encode(input):
     tokens = encode(input)[0]
+    if tokens.__class__.__name__ in ['Tensor', 'ndarray']:
+        tokens = tokens.tolist()
 
     return {
-        'results': [{
-            'tokens': tokens,
-            'length': len(tokens),
-        }]
+        'tokens': tokens,
+        'length': len(tokens),
     }
 
 
-def token_decode(tokens, encoding_format):
-    # if isinstance(input, list):
-    #    if encoding_format == "base64":
-    #         tokens = base64_to_float_list(tokens)
-    output = decode(tokens)[0]
-
+def token_decode(tokens):
+    output = decode(tokens)
     return {
-        'results': [{
-            'text': output
-        }]
+        'text': output
     }

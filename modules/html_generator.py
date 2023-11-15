@@ -7,7 +7,6 @@ from pathlib import Path
 import markdown
 from PIL import Image, ImageOps
 
-from modules.logging_colors import logger
 from modules.utils import get_available_chat_styles
 
 # This is to store the paths to the thumbnails of the profile pictures
@@ -24,6 +23,16 @@ with open(Path(__file__).resolve().parent / '../css/html_instruct_style.css', 'r
 chat_styles = {}
 for k in get_available_chat_styles():
     chat_styles[k] = open(Path(f'css/chat_style-{k}.css'), 'r').read()
+
+# Handle styles that derive from other styles
+for k in chat_styles:
+    lines = chat_styles[k].split('\n')
+    input_string = lines[0]
+    match = re.search(r'chat_style-([a-z\-]*)\.css', input_string)
+
+    if match:
+        style = match.group(1)
+        chat_styles[k] = chat_styles.get(style, '') + '\n\n' + '\n'.join(lines[1:])
 
 
 def fix_newlines(string):
@@ -61,10 +70,9 @@ def convert_to_markdown(string):
         else:
             result += '\n\n'
 
-    if is_code:
-        result = result + '```'  # Unfinished code block
-
     result = result.strip()
+    if is_code:
+        result += '\n```'  # Unfinished code block
 
     # Unfinished list, like "\n1.". A |delete| string is added and then
     # removed to force a <ol> or <ul> to be generated instead of a <p>.
@@ -92,7 +100,7 @@ def convert_to_markdown(string):
 
 def generate_basic_html(string):
     string = convert_to_markdown(string)
-    string = f'<style>{readable_css}</style><div class="container">{string}</div>'
+    string = f'<style>{readable_css}</style><div class="readable-container">{string}</div>'
     return string
 
 
