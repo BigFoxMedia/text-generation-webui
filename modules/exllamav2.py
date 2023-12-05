@@ -96,7 +96,12 @@ class Exllamav2Model:
         settings.temperature = state['temperature']
         settings.top_k = state['top_k']
         settings.top_p = state['top_p']
+        settings.min_p = state['min_p']
+        settings.tfs = state['tfs']
         settings.typical = state['typical_p']
+        settings.mirostat = state['mirostat_mode'] == 2
+        settings.mirostat_tau = state['mirostat_tau']
+        settings.mirostat_eta = state['mirostat_eta']
         settings.token_repetition_penalty = state['repetition_penalty']
         settings.token_repetition_range = -1 if state['repetition_penalty_range'] <= 0 else state['repetition_penalty_range']
         if state['ban_eos_token']:
@@ -126,7 +131,7 @@ class Exllamav2Model:
             token, _, _ = ExLlamaV2Sampler.sample(logits, settings, ids, random.random(), self.tokenizer)
             ids = torch.cat([ids, token], dim=1)
 
-            if i == 0 and self.tokenizer.tokenizer.IdToPiece(int(token)).startswith('▁'):
+            if i == 0 and self.tokenizer.tokenizer.id_to_piece(int(token)).startswith('▁'):
                 has_leading_space = True
 
             decoded_text = self.tokenizer.decode(ids[:, initial_len:], decode_special_tokens=not state['skip_special_tokens'])[0]

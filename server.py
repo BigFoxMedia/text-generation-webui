@@ -1,6 +1,7 @@
 import os
 import warnings
 
+import accelerate  # This early import makes Intel GPUs happy
 import modules.one_click_installer_check
 from modules.block_requests import OpenMonkeyPatch, RequestBlocker
 from modules.logging_colors import logger
@@ -226,13 +227,19 @@ if __name__ == "__main__":
 
     shared.generation_lock = Lock()
 
-    # Launch the web UI
-    create_interface()
-    while True:
-        time.sleep(0.5)
-        if shared.need_restart:
-            shared.need_restart = False
+    if shared.args.nowebui:
+        # Start the API in standalone mode
+        shared.args.extensions = [x for x in shared.args.extensions if x != 'gallery']
+        if shared.args.extensions is not None and len(shared.args.extensions) > 0:
+            extensions_module.load_extensions()
+    else:
+        # Launch the web UI
+        create_interface()
+        while True:
             time.sleep(0.5)
-            shared.gradio['interface'].close()
-            time.sleep(0.5)
-            create_interface()
+            if shared.need_restart:
+                shared.need_restart = False
+                time.sleep(0.5)
+                shared.gradio['interface'].close()
+                time.sleep(0.5)
+                create_interface()

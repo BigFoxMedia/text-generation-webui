@@ -5,6 +5,8 @@ from collections import deque
 import tiktoken
 import torch
 import torch.nn.functional as F
+from transformers import LogitsProcessor, LogitsProcessorList
+
 from extensions.openai.errors import InvalidRequestError
 from extensions.openai.utils import debug_msg
 from modules import shared
@@ -15,7 +17,6 @@ from modules.chat import (
 )
 from modules.presets import load_preset_memoized
 from modules.text_generation import decode, encode, generate_reply
-from transformers import LogitsProcessor, LogitsProcessorList
 
 
 class LogitsBiasProcessor(LogitsProcessor):
@@ -78,12 +79,7 @@ def process_parameters(body, is_legacy=False):
     max_tokens_str = 'length' if is_legacy else 'max_tokens'
     generate_params['max_new_tokens'] = body.pop(max_tokens_str)
     if generate_params['truncation_length'] == 0:
-        if shared.args.loader and shared.args.loader.lower().startswith('exllama'):
-            generate_params['truncation_length'] = shared.args.max_seq_len
-        elif shared.args.loader and shared.args.loader in ['llama.cpp', 'llamacpp_HF', 'ctransformers']:
-            generate_params['truncation_length'] = shared.args.n_ctx
-        else:
-            generate_params['truncation_length'] = shared.settings['truncation_length']
+        generate_params['truncation_length'] = shared.settings['truncation_length']
 
     if body['preset'] is not None:
         preset = load_preset_memoized(body['preset'])
@@ -207,6 +203,7 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
     turn_template = body['turn_template'] or turn_template
     context_instruct = body['context_instruct'] or context_instruct
     system_message = body['system_message'] or system_message
+    chat_instruct_command = body['chat_instruct_command'] or shared.settings['chat-instruct_command']
 
     # Chat character
     character = body['character'] or shared.settings['character']
@@ -232,7 +229,7 @@ def chat_completions_common(body: dict, is_legacy: bool = False, stream=False) -
         'system_message': system_message,
         'custom_system_message': custom_system_message,
         'turn_template': turn_template,
-        'chat-instruct_command': body['chat_instruct_command'],
+        'chat-instruct_command': chat_instruct_command,
         'history': history,
         'stream': stream
     })

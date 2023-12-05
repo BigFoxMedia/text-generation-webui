@@ -91,7 +91,13 @@ def generate_chat_prompt(user_input, state, **kwargs):
     if state['mode'] == 'chat-instruct':
         wrapper = ''
         command = state['chat-instruct_command'].replace('<|character|>', state['name2'] if not impersonate else state['name1'])
-        wrapper += state['context_instruct']
+        context_instruct = state['context_instruct']
+        if state['custom_system_message'].strip() != '':
+            context_instruct = context_instruct.replace('<|system-message|>', state['custom_system_message'])
+        else:
+            context_instruct = context_instruct.replace('<|system-message|>', state['system_message'])
+
+        wrapper += context_instruct
         wrapper += all_substrings['instruct']['user_turn'].replace('<|user-message|>', command)
         wrapper += all_substrings['instruct']['bot_turn_stripped']
         if impersonate:
@@ -275,7 +281,7 @@ def chatbot_wrapper(text, state, regenerate=False, _continue=False, loading_mess
 
 def impersonate_wrapper(text, state):
 
-    static_output = chat_html_wrapper(state['history'], state['name1'], state['name2'], state['mode'], state['chat_style'])
+    static_output = chat_html_wrapper(state['history'], state['name1'], state['name2'], state['mode'], state['chat_style'], state['character_menu'])
 
     if shared.model_name == 'None' or shared.model is None:
         logger.error("No model is loaded! Select one in the Model tab.")
@@ -334,7 +340,7 @@ def generate_chat_reply_wrapper(text, state, regenerate=False, _continue=False):
         send_dummy_reply(state['start_with'], state)
 
     for i, history in enumerate(generate_chat_reply(text, state, regenerate, _continue, loading_message=True)):
-        yield chat_html_wrapper(history, state['name1'], state['name2'], state['mode'], state['chat_style']), history
+        yield chat_html_wrapper(history, state['name1'], state['name2'], state['mode'], state['chat_style'], state['character_menu']), history
 
 
 def remove_last_message(history):
@@ -384,8 +390,8 @@ def send_dummy_reply(text, state):
     return history
 
 
-def redraw_html(history, name1, name2, mode, style, reset_cache=False):
-    return chat_html_wrapper(history, name1, name2, mode, style, reset_cache=reset_cache)
+def redraw_html(history, name1, name2, mode, style, character, reset_cache=False):
+    return chat_html_wrapper(history, name1, name2, mode, style, character, reset_cache=reset_cache)
 
 
 def start_new_chat(state):
@@ -539,9 +545,13 @@ def generate_pfp_cache(character):
 
     for path in [Path(f"characters/{character}.{extension}") for extension in ['png', 'jpg', 'jpeg']]:
         if path.exists():
-            img = make_thumbnail(Image.open(path))
-            img.save(Path('cache/pfp_character.png'), format='PNG')
-            return img
+            original_img = Image.open(path)
+            original_img.save(Path('cache/pfp_character.png'), format='PNG')
+
+            thumb = make_thumbnail(original_img)
+            thumb.save(Path('cache/pfp_character_thumb.png'), format='PNG')
+
+            return thumb
 
     return None
 
@@ -570,8 +580,9 @@ def load_character(character, name1, name2, instruct=False):
     file_contents = open(filepath, 'r', encoding='utf-8').read()
     data = json.loads(file_contents) if extension == "json" else yaml.safe_load(file_contents)
 
-    if Path("cache/pfp_character.png").exists() and not instruct:
-        Path("cache/pfp_character.png").unlink()
+    for path in [Path("cache/pfp_character.png"), Path("cache/pfp_character_thumb.png")]:
+        if path.exists() and not instruct:
+            path.unlink()
 
     picture = generate_pfp_cache(character)
 

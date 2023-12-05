@@ -99,7 +99,7 @@ class ChatCompletionRequestParams(BaseModel):
     system_message: str | None = Field(default=None, description="Overwrites the value set by instruction_template.")
 
     character: str | None = Field(default=None, description="A character defined under text-generation-webui/characters. If not set, the default \"Assistant\" character will be used.")
-    name1: str | None = Field(default=None, description="Overwrites the value set by character.")
+    name1: str | None = Field(default=None, description="Your name (the user). By default, it's \"You\".")
     name2: str | None = Field(default=None, description="Overwrites the value set by character.")
     context: str | None = Field(default=None, description="Overwrites the value set by character.")
     greeting: str | None = Field(default=None, description="Overwrites the value set by character.")
@@ -122,38 +122,6 @@ class ChatCompletionResponse(BaseModel):
     usage: dict
 
 
-class EncodeRequest(BaseModel):
-    text: str
-
-
-class DecodeRequest(BaseModel):
-    tokens: List[int]
-
-
-class EncodeResponse(BaseModel):
-    tokens: List[int]
-    length: int
-
-
-class DecodeResponse(BaseModel):
-    text: str
-
-
-class TokenCountResponse(BaseModel):
-    length: int
-
-
-class ModelInfoResponse(BaseModel):
-    model_name: str
-    lora_names: List[str]
-
-
-class LoadModelRequest(BaseModel):
-    model_name: str
-    args: dict | None = None
-    settings: dict | None = None
-
-
 class EmbeddingsRequest(BaseModel):
     input: str | List[str]
     model: str | None = Field(default=None, description="Unused parameter. To change the model, set the OPENEDAI_EMBEDDING_MODEL and OPENEDAI_EMBEDDING_DEVICE environment variables before starting the server.")
@@ -165,6 +133,68 @@ class EmbeddingsResponse(BaseModel):
     index: int
     embedding: List[float]
     object: str = "embedding"
+
+
+class EncodeRequest(BaseModel):
+    text: str
+
+
+class EncodeResponse(BaseModel):
+    tokens: List[int]
+    length: int
+
+
+class DecodeRequest(BaseModel):
+    tokens: List[int]
+
+
+class DecodeResponse(BaseModel):
+    text: str
+
+
+class TokenCountResponse(BaseModel):
+    length: int
+
+
+class LogitsRequestParams(BaseModel):
+    prompt: str
+    use_samplers: bool = False
+    frequency_penalty: float | None = 0
+    max_tokens: int | None = 16
+    presence_penalty: float | None = 0
+    temperature: float | None = 1
+    top_p: float | None = 1
+
+
+class LogitsRequest(GenerationOptions, LogitsRequestParams):
+    pass
+
+
+class LogitsResponse(BaseModel):
+    logits: dict
+
+
+class ModelInfoResponse(BaseModel):
+    model_name: str
+    lora_names: List[str]
+
+
+class ModelListResponse(BaseModel):
+    model_names: List[str]
+
+
+class LoadModelRequest(BaseModel):
+    model_name: str
+    args: dict | None = None
+    settings: dict | None = None
+
+
+class LoraListResponse(BaseModel):
+    lora_names: List[str]
+
+
+class LoadLorasRequest(BaseModel):
+    lora_names: List[str]
 
 
 def to_json(obj):

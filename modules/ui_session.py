@@ -51,12 +51,14 @@ def set_interface_arguments(extensions, bool_active):
         setattr(shared.args, k, False)
     for k in bool_active:
         setattr(shared.args, k, True)
+        if k == 'api':
+            shared.add_extension('openai', last=True)
 
     shared.need_restart = True
 
 
 def get_boolean_arguments(active=False):
-    exclude = ["default", "notebook", "chat"]
+    exclude = shared.deprecated_args
 
     cmd_list = vars(shared.args)
     bool_list = sorted([k for k in cmd_list if type(cmd_list[k]) is bool and k not in exclude + ui.list_model_elements()])
