@@ -30,10 +30,18 @@ class ModelDownloader:
         if max_retries:
             self.session.mount('https://cdn-lfs.huggingface.co', HTTPAdapter(max_retries=max_retries))
             self.session.mount('https://huggingface.co', HTTPAdapter(max_retries=max_retries))
+
         if os.getenv('HF_USER') is not None and os.getenv('HF_PASS') is not None:
             self.session.auth = (os.getenv('HF_USER'), os.getenv('HF_PASS'))
-        if os.getenv('HF_TOKEN') is not None:
-            self.session.headers = {'authorization': f'Bearer {os.getenv("HF_TOKEN")}'}
+
+        try:
+            from huggingface_hub import get_token
+            token = get_token()
+        except ImportError:
+            token = os.getenv("HF_TOKEN")
+
+        if token is not None:
+            self.session.headers = {'authorization': f'Bearer {token}'}
 
     def sanitize_model_and_branch_names(self, model, branch):
         if model[-1] == '/':
@@ -127,10 +135,23 @@ class ModelDownloader:
                 if classifications[i] in ['pytorch', 'pt']:
                     links.pop(i)
 
+        # For GGUF, try to download only the Q4_K_M if no specific file is specified.
+        # If not present, exclude all GGUFs, as that's likely a repository with both
+        # GGUF and fp16 files.
         if has_gguf and specific_file is None:
+            has_q4km = False
             for i in range(len(classifications) - 1, -1, -1):
-                if 'q4_k_m' not in links[i].lower():
-                    links.pop(i)
+                if 'q4_k_m' in links[i].lower():
+                    has_q4km = True
+
+            if has_q4km:
+                for i in range(len(classifications) - 1, -1, -1):
+                    if 'q4_k_m' not in links[i].lower():
+                        links.pop(i)
+            else:
+                for i in range(len(classifications) - 1, -1, -1):
+                    if links[i].lower().endswith('.gguf'):
+                        links.pop(i)
 
         is_llamacpp = has_gguf and specific_file is not None
         return links, sha256, is_lora, is_llamacpp
